@@ -25,8 +25,8 @@ for creating an efficient, powerful, and reliable reverse tunnel core that made 
 
 ## Install
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/DavoodHuntex/huntex-backhaul/main/huntex-backhaul.sh | bash
+[curl -fsSL]
+(https://raw.githubusercontent.com/DavoodHuntex/huntex-backhaul/main/huntex-backhaul.sh | bash )
 
 ---
 
