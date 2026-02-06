@@ -815,12 +815,26 @@ main() {
   require_tools
   ensure_dir "$INSTALL_DIR"
 
+  # Determine the real script path (works with set -u and with/without BASH_SOURCE)
+  local self
+  self="$(readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || true)"
+
   # If started via pipe (curl | bash), try to reattach stdin to the real TTY
   if [[ ! -t 0 ]]; then
     if [[ -r /dev/tty ]]; then
       exec </dev/tty
     else
+      # Non-interactive environment (no TTY): do a safe install then exit
       echo "[INFO] Non-interactive install detected (no TTY available)."
+
+      if [[ ! -x "$BIN_PATH" ]]; then
+        echo "[INFO] Backhaul core not found. Installing..."
+        download_and_install_core || {
+          echo "[ERROR] Core install failed."
+          return 1
+        }
+      fi
+
       echo
       echo "Run the panel using:"
       echo "  hx-bh"
@@ -830,28 +844,36 @@ main() {
     fi
   fi
 
+  # Create global command shortcuts so the panel can be launched
+  # from anywhere using `hx-bh` or `huntex-backhaul`
+  if [[ -n "$self" && -f "$self" ]]; then
+    ln -sf "$self" /usr/bin/hx-bh 2>/dev/null || true
+    ln -sf "$self" /usr/bin/huntex-backhaul 2>/dev/null || true
+  else
+    # Fallback to expected installed path
+    ln -sf /opt/huntex-backhaul/huntex-backhaul.sh /usr/bin/hx-bh 2>/dev/null || true
+    ln -sf /opt/huntex-backhaul/huntex-backhaul.sh /usr/bin/huntex-backhaul 2>/dev/null || true
+  fi
+
+  ensure_systemd_template || true
+
+  # Auto-install core if missing (interactive mode)
+  if [[ ! -x "$BIN_PATH" ]]; then
+    echo "[INFO] Backhaul core not found. Installing..."
+    download_and_install_core || {
+      echo "[ERROR] Core install failed."
+      pause
+      return 1
+    }
+  fi
+
   clear_screen
   trap 'clear_screen; exit 0' SIGINT
 
-  # Create global command shortcuts so the panel can be launched
-  # from anywhere using `hx-bh` or `huntex-backhaul`
-  
-  ln -sf /opt/huntex-backhaul/huntex-backhaul.sh /usr/bin/hx-bh 2>/dev/null || true
-  ln -sf /opt/huntex-backhaul/huntex-backhaul.sh /usr/bin/huntex-backhaul 2>/dev/null || true
-  ensure_systemd_template || true
-
-  # Auto-install core if missing
-  if [[ ! -x "$INSTALL_DIR/backhaul" ]]; then
-    echo "[INFO] Backhaul core not found. Installing..."
-    core_install || {
-      echo "[ERROR] Core install failed."
-      pause
-    }
-  fi
-  
   main_menu
 }
 
+# Run only if executed directly (safe with set -u)
 if [[ "${BASH_SOURCE[0]:-$0}" == "$0" ]]; then
   main "$@"
 fi
