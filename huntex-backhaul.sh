@@ -22,6 +22,19 @@
 
 set -Eeuo pipefail
 
+# Bootstrap: if running via pipe, save to disk then re-exec from file
+if [[ "${HX_BOOTSTRAPPED:-0}" != "1" ]] && [[ ! -t 0 ]]; then
+  INSTALL_SCRIPT="/opt/huntex-backhaul/huntex-backhaul.sh"
+  mkdir -p "$(dirname "$INSTALL_SCRIPT")"
+
+  # If we can read the pipe content, persist it
+  cat >"$INSTALL_SCRIPT"
+  chmod +x "$INSTALL_SCRIPT"
+
+  export HX_BOOTSTRAPPED=1
+  exec bash "$INSTALL_SCRIPT" "$@"
+fi
+
 # ---------------------------
 # Theme (ANSI 256 colors)
 # ---------------------------
@@ -820,15 +833,22 @@ main() {
   clear_screen
   trap 'clear_screen; exit 0' SIGINT
 
-  # Auto-install/refresh command alias when possible (local file execution)
-  if [[ -f "$0" && "$0" != "bash" ]]; then
-    target="$(readlink -f "$0" 2>/dev/null || echo "$0")"
-    ln -sf "$target" /usr/bin/hx-bh 2>/dev/null || true
-    ln -sf "$target" /usr/bin/huntex-backhaul 2>/dev/null || true
-    chmod +x "$target" 2>/dev/null || true
-  fi
-
+  # Create global command shortcuts so the panel can be launched
+  # from anywhere using `hx-bh` or `huntex-backhaul`
+  
+  ln -sf /opt/huntex-backhaul/huntex-backhaul.sh /usr/bin/hx-bh 2>/dev/null || true
+  ln -sf /opt/huntex-backhaul/huntex-backhaul.sh /usr/bin/huntex-backhaul 2>/dev/null || true
   ensure_systemd_template || true
+
+  # Auto-install core if missing
+  if [[ ! -x "$INSTALL_DIR/backhaul" ]]; then
+    echo "[INFO] Backhaul core not found. Installing..."
+    core_install || {
+      echo "[ERROR] Core install failed."
+      pause
+    }
+  fi
+  
   main_menu
 }
 
