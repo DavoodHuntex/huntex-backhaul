@@ -794,30 +794,44 @@ main_menu() {
   done
 }
 
-# ---------------------------
+# ------------------------------
 # Entrypoint
-# ---------------------------
+# ------------------------------
 main() {
   need_root
   require_tools
   ensure_dir "$INSTALL_DIR"
 
-  # Clean start: show ONLY the panel
-  clear_screen
+  # If started via pipe (curl | bash), try to reattach stdin to the real TTY
+  if [[ ! -t 0 ]]; then
+    if [[ -r /dev/tty ]]; then
+      exec </dev/tty
+    else
+      echo "[INFO] Non-interactive install detected (no TTY available)."
+      echo
+      echo "Run the panel using:"
+      echo "  hx-bh"
+      echo "or"
+      echo "  huntex-backhaul"
+      return 0
+    fi
+  fi
 
-  # On Ctrl+C: clear and exit cleanly.
+  clear_screen
   trap 'clear_screen; exit 0' SIGINT
 
   # Auto-install/refresh command alias when possible (local file execution)
   if [[ -f "$0" && "$0" != "bash" ]]; then
     target="$(readlink -f "$0" 2>/dev/null || echo "$0")"
     ln -sf "$target" /usr/bin/hx-bh 2>/dev/null || true
+    ln -sf "$target" /usr/bin/huntex-backhaul 2>/dev/null || true
     chmod +x "$target" 2>/dev/null || true
   fi
 
   ensure_systemd_template || true
   main_menu
 }
+
 if [[ "${BASH_SOURCE[0]:-$0}" == "$0" ]]; then
   main "$@"
 fi
