@@ -28,7 +28,9 @@ Start the panel using one of the following commands:
 
 ```bash
 hx-bh
-# or
+```
+or
+```
 huntex-backhaul
 ```
 
