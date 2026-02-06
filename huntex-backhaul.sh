@@ -818,6 +818,6 @@ main() {
   ensure_systemd_template || true
   main_menu
 }
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ "${BASH_SOURCE[0]:-$0}" == "$0" ]]; then
   main "$@"
 fi
