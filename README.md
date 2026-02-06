@@ -26,9 +26,11 @@ curl -fsSL https://raw.githubusercontent.com/DavoodHuntex/huntex-backhaul/main/h
 
 Start the panel using one of the following commands:
 
-``` hx-bh  ```
+```bash
+hx-bh
 # or
-``` huntex-backhaul ```
+huntex-backhaul
+```
 
 ## Notes
 
